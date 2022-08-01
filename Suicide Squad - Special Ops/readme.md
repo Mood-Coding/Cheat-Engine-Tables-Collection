@@ -1,5 +1,5 @@
 ## Feature
-<img src="Suicide Squad - Special Ops/ce%20feature.png"/>
+<img src="ce%20feature.png"/>
 
 ## Instructions
 Open the game first, then click on > Activate me first <  
