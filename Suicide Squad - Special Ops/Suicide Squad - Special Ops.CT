@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CheatTable CheatEngineTableVersion="42">
+  <CheatEntries>
+    <CheatEntry>
+      <ID>6</ID>
+      <Description>"&gt; Active me first &lt;"</Description>
+      <Options moHideChildren="1" moManualExpandCollapse="1" moDeactivateChildrenAsWell="1"/>
+      <LastState/>
+      <Color>00FFFF</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+{$lua}
+OpenProcess("Suicide Squad - Special Ops.exe")
+
+if (LaunchMonoDataCollector()) == 0 then
+   messageDialog("Failed to launch MonoDataCollector", mtError, mbClose)
+   closeCE()
+end
+
+if getCEVersion() &lt; 7.4 then
+   messageDialog("You are using an outdated version of Cheat Engine. Please update to the latest version!", mtError, mbClose)
+   closeCE()
+end
+
+[DISABLE]
+</AssemblerScript>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>0</ID>
+          <Description>"Inf Ammo"</Description>
+          <LastState/>
+          <Color>00FF00</Color>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>[ENABLE]
+Game.AmmoComponent:Fire+2c:
+nop
+nop
+nop
+ 
+[DISABLE]
+Game.AmmoComponent:Fire+2c:
+mov [esi+24],eax
+</AssemblerScript>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>1</ID>
+          <Description>"God Mode"</Description>
+          <LastState/>
+          <Color>0000FF</Color>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>[ENABLE]
+Game.HitReceiver:TakeHit+5f:
+nop
+nop
+nop
+ 
+[DISABLE]
+Game.HitReceiver:TakeHit+5f:
+call dword ptr [eax-38]
+</AssemblerScript>
+        </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+  </CheatEntries>
+  <UserdefinedSymbols/>
+  <Comments>Info about this table:
+</Comments>
+</CheatTable>
