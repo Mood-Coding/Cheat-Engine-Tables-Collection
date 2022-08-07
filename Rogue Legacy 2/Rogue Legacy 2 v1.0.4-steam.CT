@@ -1,0 +1,759 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CheatTable CheatEngineTableVersion="42">
+  <CheatEntries>
+    <CheatEntry>
+      <ID>6</ID>
+      <Description>"&gt; Active me first &lt;"</Description>
+      <Options moManualExpandCollapse="1" moDeactivateChildrenAsWell="1"/>
+      <LastState/>
+      <Color>40FF00</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+{$lua}
+OpenProcess("Rogue Legacy 2.exe")
+
+if (LaunchMonoDataCollector()) == 0 then
+   messageDialog("Failed to launch MonoDataCollector", mtError, mbClose)
+   closeCE()
+end
+
+if getCEVersion() &lt; 7.4 then
+   messageDialog("You are using an outdated version of Cheat Engine. Please update to the latest version!", mtError, mbClose)
+   closeCE()
+end
+
+[DISABLE]
+</AssemblerScript>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>11</ID>
+          <Description>"God Mode"</Description>
+          <LastState/>
+          <Color>0000FF</Color>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>[ENABLE]
+PlayerHitResponse:StartHitResponse+f8:
+  nop 3
+
+[DISABLE]
+PlayerHitResponse:StartHitResponse+f8:
+  call r11
+</AssemblerScript>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>19</ID>
+              <Description>"No lost Health (still take knockback, blink effect,...)"</Description>
+              <LastState Value="00000000" RealAddress="29F0A57D0C4"/>
+              <ShowAsHex>1</ShowAsHex>
+              <ShowAsSigned>0</ShowAsSigned>
+              <Color>0000FF</Color>
+              <VariableType>4 Bytes</VariableType>
+              <Address>"UnityPlayer.dll"+019EEFC8</Address>
+              <Offsets>
+                <Offset>C4</Offset>
+                <Offset>18</Offset>
+                <Offset>28</Offset>
+                <Offset>28</Offset>
+                <Offset>80</Offset>
+                <Offset>8</Offset>
+              </Offsets>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>10</ID>
+              <Description>"No lost Health (worse)"</Description>
+              <LastState/>
+              <Color>0000FF</Color>
+              <VariableType>Auto Assembler Script</VariableType>
+              <AssemblerScript>[ENABLE]
+{$asm}
+assert(PlayerController:SetHealth, 55 48 8B EC 48 83 EC 40)
+alloc(numzero, 0x4, PlayerController:SetHealth)
+alloc(newmem, 1024, PlayerController:SetHealth)
+label(originalcode)
+label(return)
+
+numzero:
+  dd (float)0.0
+
+newmem:
+  pushfq
+  comiss xmm1, [numzero] {cmp vs 0.0f}
+  ja originalcode {only allow adding positive value to current health}
+  popfq
+  ret
+originalcode:
+  popfq
+  push rbp
+  mov rbp, rsp
+  sub rsp, 40
+  jmp return
+
+PlayerController:SetHealth:
+  jmp newmem
+  nop 3
+  return:
+
+[DISABLE]
+PlayerController:SetHealth:
+  push rbp
+  mov rbp,rsp
+  sub rsp,40
+
+dealloc(newmem)
+dealloc(number)
+</AssemblerScript>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>12</ID>
+          <Description>"Inf Jump"</Description>
+          <LastState/>
+          <Color>FFFF00</Color>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>[ENABLE]
+{$lua}
+function reEscape(s)
+  local escPatChars = [[().%+-*?[^]]
+  s = s:gsub('.',function(c) if escPatChars:find(c,1,true) then return '%'..c end end)
+  return s
+end
+
+function findMethodAddrBySignature(namespace,classname,methodname,signature,check)
+  local meth = findMethodBySignature(namespace,classname,methodname,signature,check)
+  if meth~=nil and meth&gt;0 then
+    return mono_compile_method(meth)
+  end
+end
+
+function findMethodBySignature(namespace,classname,methodname,signature,check)
+  assert(type(signature)=='string',"invalid signature")
+  signature="^"..reEscape(signature:gsub(";",","))
+  local class = mono_findClass(namespace,classname)
+  if type(class)~='number' or class==0 then return nil end
+  local methods=mono_class_enumMethods(class)
+  if type(methods)~='table' or #methods&lt;1 then return nil end
+  if check then  print('check:'..methodname..": &lt;"..signature.."&gt; vs ") end
+  for i=1,#methods do
+   if methodname == methods[i].name then
+     local sign = mono_method_getSignature(methods[i].method)
+     if check then  print("  &gt;&gt; &lt;"..sign..'&gt;') end
+     if sign:match(signature) then
+       return methods[i].method
+     end
+   end
+  end
+end
+
+EVALUATE_JUMP_CONDITIONS_ADDR = findMethodAddrBySignature('Assembly-CSharp', 'CharacterJump_RL', 'EvaluateJumpConditions', '$', false)
+
+{$asm}
+EVALUATE_JUMP_CONDITIONS_ADDR+59e: {make base.NumberOfJumpsLeft always &gt; 0}
+  nop 2
+  jmp EVALUATE_JUMP_CONDITIONS_ADDR+5a9
+
+[DISABLE]
+EVALUATE_JUMP_CONDITIONS_ADDR+59e:
+  test eax, eax
+  jg EVALUATE_JUMP_CONDITIONS_ADDR+5a9
+</AssemblerScript>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>5</ID>
+          <Description>"Inf use Ability"</Description>
+          <LastState/>
+          <Color>FFFF00</Color>
+          <VariableType>Auto Assembler Script</VariableType>
+          <AssemblerScript>[ENABLE]
+{$lua}
+function reEscape(s)
+  local escPatChars = [[().%+-*?[^]]
+  s = s:gsub('.',function(c) if escPatChars:find(c,1,true) then return '%'..c end end)
+  return s
+end
+
+function findMethodAddrBySignature(namespace,classname,methodname,signature,check)
+  local meth = findMethodBySignature(namespace,classname,methodname,signature,check)
+  if meth~=nil and meth&gt;0 then
+    return mono_compile_method(meth)
+  end
+end
+
+function findMethodBySignature(namespace,classname,methodname,signature,check)
+  assert(type(signature)=='string',"invalid signature")
+  signature="^"..reEscape(signature:gsub(";",","))
+  local class = mono_findClass(namespace,classname)
+  if type(class)~='number' or class==0 then return nil end
+  local methods=mono_class_enumMethods(class)
+  if type(methods)~='table' or #methods&lt;1 then return nil end
+  if check then  print('check:'..methodname..": &lt;"..signature.."&gt; vs ") end
+  for i=1,#methods do
+   if methodname == methods[i].name then
+     local sign = mono_method_getSignature(methods[i].method)
+     if check then  print("  &gt;&gt; &lt;"..sign..'&gt;') end
+     if sign:match(signature) then
+       return methods[i].method
+     end
+   end
+  end
+end
+
+IS_ABILITY_PERMITTED_ADDR = findMethodAddrBySignature('Assembly-CSharp','CastAbility_RL','IsAbilityPermitted','BaseAbility_RL$', false)
+
+{$asm}
+IS_ABILITY_PERMITTED_ADDR+977: {use ability when not enough mana}
+  jmp IS_ABILITY_PERMITTED_ADDR+b72
+  nop
+
+BaseAbility_RL:ApplyAbilityCosts+238: {using ability won't decrease player mana}
+  nop 3
+
+[DISABLE]
+IS_ABILITY_PERMITTED_ADDR+977:
+  jng IS_ABILITY_PERMITTED_ADDR+b72
+
+BaseAbility_RL:ApplyAbilityCosts+238:
+  call r11
+</AssemblerScript>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>18</ID>
+          <Description>"PlayerController obj"</Description>
+          <Options moManualExpandCollapse="1"/>
+          <LastState Value="179963896" RealAddress="29F0A57D000"/>
+          <ShowAsSigned>0</ShowAsSigned>
+          <VariableType>4 Bytes</VariableType>
+          <Address>"UnityPlayer.dll"+019EEFC8</Address>
+          <Offsets>
+            <Offset>0</Offset>
+            <Offset>18</Offset>
+            <Offset>28</Offset>
+            <Offset>28</Offset>
+            <Offset>80</Offset>
+            <Offset>8</Offset>
+          </Offsets>
+        </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+  </CheatEntries>
+  <UserdefinedSymbols/>
+  <LuaScript>print(1)
+</LuaScript>
+  <DisassemblerComments>
+    <DisassemblerComment>
+      <Address>20DC4A8A80B</Address>
+      <Comment>if (this.m_aimLine)
+</Comment>
+    </DisassemblerComment>
+    <DisassemblerComment>
+      <Address>20DC4A8A80D</Address>
+      <Comment>eax == 0 return
+</Comment>
+    </DisassemblerComment>
+    <DisassemblerComment>
+      <Address>20DC4A8A843</Address>
+      <Comment>[rbp-00000270] = projSpeed
+</Comment>
+    </DisassemblerComment>
+    <DisassemblerComment>
+      <Address>20DC4A8A853</Address>
+      <Comment>if (num == 0f)
+</Comment>
+    </DisassemblerComment>
+    <DisassemblerComment>
+      <Address>20DC4A8A886</Address>
+      <Comment>AngleToVector
+</Comment>
+    </DisassemblerComment>
+    <DisassemblerComment>
+      <Address>20DC4A8A89A</Address>
+      <Comment>[rbp-00000270] = projSpeed
+</Comment>
+    </DisassemblerComment>
+    <DisassemblerComment>
+      <Address>2347FA5C896</Address>
+      <Comment>this.m_queueJump = false;
+</Comment>
+    </DisassemblerComment>
+    <DisassemblerComment>
+      <Address>2347FA5C8A3</Address>
+      <Comment>this.EvaluateJumpConditions()
+</Comment>
+    </DisassemblerComment>
+    <DisassemblerComment>
+      <Address>2347FA5C976</Address>
+      <Comment>if (this.m_queueJumpCoroutine != null)
+</Comment>
+    </DisassemblerComment>
+    <DisassemblerComment>
+      <Address>2347FA5C9AC</Address>
+      <Comment>this._condition.CurrentState == CharacterStates.CharacterConditions.Stunned
+</Comment>
+    </DisassemblerComment>
+    <DisassemblerComment>
+      <Address>2347FA5CA3A</Address>
+      <Comment>flag = 0
+</Comment>
+    </DisassemblerComment>
+    <DisassemblerComment>
+      <Address>2347FA5CA48</Address>
+      <Comment>this._controller.ResetColliderSize();
+</Comment>
+    </DisassemblerComment>
+    <DisassemblerComment>
+      <Address>2347FA5CA4E</Address>
+      <Comment>this.m_isJumpDash = false;
+</Comment>
+    </DisassemblerComment>
+    <DisassemblerComment>
+      <Address>2347FA5CA5C</Address>
+      <Comment>this.CanJumpWhileDashing 
+</Comment>
+    </DisassemblerComment>
+    <DisassemblerComment>
+      <Address>2347FA5CAA1</Address>
+      <Comment>this._movement.CurrentState == CharacterStates.MovementStates.Dashing)
+</Comment>
+    </DisassemblerComment>
+    <DisassemblerComment>
+      <Address>2347FA5CABD</Address>
+      <Comment>this.m_playerController.CharacterDash.StopDash();
+</Comment>
+    </DisassemblerComment>
+    <DisassemblerComment>
+      <Address>2347FA5CAE8</Address>
+      <Comment>this.m_playerController.CharacterFlight.StopFlight();
+</Comment>
+    </DisassemblerComment>
+    <DisassemblerComment>
+      <Address>2347FA5CAFC</Address>
+      <Comment>this._controller.State.JustStartedJump = true;
+</Comment>
+    </DisassemblerComment>
+    <DisassemblerComment>
+      <Address>2347FA5CB10</Address>
+      <Comment>Time.time.get()
+</Comment>
+    </DisassemblerComment>
+    <DisassemblerComment>
+      <Address>2347FA5CB2A</Address>
+      <Comment>CharacterStates.MovementStates.Jumping
+</Comment>
+    </DisassemblerComment>
+    <DisassemblerComment>
+      <Address>2347FA5CB40</Address>
+      <Comment>this._movement.ChangeState(CharacterStates.MovementStates.Jumping);
+</Comment>
+    </DisassemblerComment>
+    <DisassemblerComment>
+      <Address>2347FA5CB50</Address>
+      <Comment>this.IsJumpWithinLeeway() 
+</Comment>
+    </DisassemblerComment>
+    <DisassemblerComment>
+      <Address>2347FA5CB5B</Address>
+      <Comment>flag
+</Comment>
+    </DisassemblerComment>
+    <DisassemblerComment>
+      <Address>2347FA5CB70</Address>
+      <Comment>this.ResetDoubleJump();
+</Comment>
+    </DisassemblerComment>
+    <DisassemblerComment>
+      <Address>2347FA5CB73</Address>
+      <Comment>TraitType.HighJump
+</Comment>
+    </DisassemblerComment>
+    <DisassemblerComment>
+      <Address>2347FA5CB88</Address>
+      <Comment>TraitManager.IsTraitActive(TraitType.HighJump))
+</Comment>
+    </DisassemblerComment>
+    <DisassemblerComment>
+      <Address>2347FA5CB8B</Address>
+      <Comment>if (TraitManager.IsTraitActive(TraitType.HighJump))
+</Comment>
+    </DisassemblerComment>
+    <DisassemblerComment>
+      <Address>2347FA5CC18</Address>
+      <Comment>this.m_playerController.CharacterFlight.IsComet;
+</Comment>
+    </DisassemblerComment>
+    <DisassemblerComment>
+      <Address>2347FA5CC1B</Address>
+      <Comment>bool isComet = this.m_playerController.CharacterFlight.IsComet;
+</Comment>
+    </DisassemblerComment>
+    <DisassemblerComment>
+      <Address>2347FA5CC37</Address>
+      <Comment>this._doubleJumping = true;
+</Comment>
+    </DisassemblerComment>
+    <DisassemblerComment>
+      <Address>2347FA5CC45</Address>
+      <Comment>if (!this._doubleJumping
+</Comment>
+    </DisassemblerComment>
+    <DisassemblerComment>
+      <Address>2347FA5CC49</Address>
+      <Comment>flag
+</Comment>
+    </DisassemblerComment>
+    <DisassemblerComment>
+      <Address>2347FA5CC71</Address>
+      <Comment>flag
+</Comment>
+    </DisassemblerComment>
+    <DisassemblerComment>
+      <Address>2347FA5CC75</Address>
+      <Comment>base.NumberOfJumpsLeft
+</Comment>
+    </DisassemblerComment>
+    <DisassemblerComment>
+      <Address>2347FA5CC7C</Address>
+      <Comment>base.NumberOfJumpsLeft--;
+</Comment>
+    </DisassemblerComment>
+    <DisassemblerComment>
+      <Address>2347FA5CC84</Address>
+      <Comment>if (base.NumberOfJumpsLeft &lt; 0)
+</Comment>
+    </DisassemblerComment>
+    <DisassemblerComment>
+      <Address>2347FA5CC86</Address>
+      <Comment>base.NumberOfJumpsLeft = 0;
+</Comment>
+    </DisassemblerComment>
+    <DisassemblerComment>
+      <Address>2347FA5CCA8</Address>
+      <Comment>this._condition.ChangeState(CharacterStates.CharacterConditions.Normal);
+</Comment>
+    </DisassemblerComment>
+    <DisassemblerComment>
+      <Address>2347FA5CCBA</Address>
+      <Comment>this._controller.GravityActive(true);
+</Comment>
+    </DisassemblerComment>
+    <DisassemblerComment>
+      <Address>2347FA5CCCA</Address>
+      <Comment>this._controller.CollisionsOn();
+</Comment>
+    </DisassemblerComment>
+    <DisassemblerComment>
+      <Address>2347FA5CCD6</Address>
+      <Comment>this.SetJumpFlags();
+</Comment>
+    </DisassemblerComment>
+    <DisassemblerComment>
+      <Address>2347FA5CCDC</Address>
+      <Comment>this.m_useBrakeForce = true;
+</Comment>
+    </DisassemblerComment>
+    <DisassemblerComment>
+      <Address>2347FA5CCF8</Address>
+      <Comment>this.JumpHeight * this.JumpHeightMultiplier;
+</Comment>
+    </DisassemblerComment>
+    <DisassemblerComment>
+      <Address>2347FA5CD00</Address>
+      <Comment>float num = this.JumpHeight * this.JumpHeightMultiplier;
+</Comment>
+    </DisassemblerComment>
+    <DisassemblerComment>
+      <Address>2347FA5CD05</Address>
+      <Comment>base.NumberOfJumpsLeft
+</Comment>
+    </DisassemblerComment>
+    <DisassemblerComment>
+      <Address>2347FA5CD0C</Address>
+      <Comment>this.NumberOfJumps 
+</Comment>
+    </DisassemblerComment>
+    <DisassemblerComment>
+      <Address>2347FA5CD10</Address>
+      <Comment>this.NumberOfJumps -1
+</Comment>
+    </DisassemblerComment>
+    <DisassemblerComment>
+      <Address>2347FA5CD12</Address>
+      <Comment>if (base.NumberOfJumpsLeft &lt; this.NumberOfJumps - 1)
+</Comment>
+    </DisassemblerComment>
+    <DisassemblerComment>
+      <Address>2347FA5CD3F</Address>
+      <Comment>flag
+</Comment>
+    </DisassemblerComment>
+    <DisassemblerComment>
+      <Address>2347FA5CD47</Address>
+      <Comment>jump when get hit
+</Comment>
+    </DisassemblerComment>
+    <DisassemblerComment>
+      <Address>2347FA5D1B8</Address>
+      <Comment>Mathf.Abs(this._controller.Parameters.Gravity)
+</Comment>
+    </DisassemblerComment>
+    <DisassemblerComment>
+      <Address>2347FA5D1FA</Address>
+      <Comment>Mathf.Sqrt(2f * Mathf.Abs(this._controller.Parameters.Gravity)
+</Comment>
+    </DisassemblerComment>
+    <DisassemblerComment>
+      <Address>2347FA5D268</Address>
+      <Comment>this._controller.SetVerticalForce(num2);
+</Comment>
+    </DisassemblerComment>
+    <DisassemblerComment>
+      <Address>2347FA5D26E</Address>
+      <Comment>base.JumpHappenedThisFrame = true;
+</Comment>
+    </DisassemblerComment>
+    <DisassemblerComment>
+      <Address>2347FA5D275</Address>
+      <Comment>GameEvent.PlayerJump,
+</Comment>
+    </DisassemblerComment>
+    <DisassemblerComment>
+      <Address>2347FA5D290</Address>
+      <Comment>Messenger&lt;GameMessenger, GameEvent&gt;.Broadcast(GameEvent.PlayerJump, this, null);
+</Comment>
+    </DisassemblerComment>
+    <DisassemblerComment>
+      <Address>2347FA5D29A</Address>
+      <Comment>if (this._doubleJumping)
+</Comment>
+    </DisassemblerComment>
+    <DisassemblerComment>
+      <Address>2347FA5D4E0</Address>
+      <Comment>get_IsGrounded()
+</Comment>
+    </DisassemblerComment>
+    <DisassemblerComment>
+      <Address>2347FA5D4E3</Address>
+      <Comment>this._controller.State.IsGrounded
+</Comment>
+    </DisassemblerComment>
+    <DisassemblerComment>
+      <Address>2347FA5D4E5</Address>
+      <Comment>jump if == 0
+</Comment>
+    </DisassemblerComment>
+    <DisassemblerComment>
+      <Address>2347FA5D4F5</Address>
+      <Comment>this._condition.CurrentState
+</Comment>
+    </DisassemblerComment>
+    <DisassemblerComment>
+      <Address>2347FA5D4F9</Address>
+      <Comment>this._condition.CurrentState == CharacterStates.CharacterConditions.Normal
+</Comment>
+    </DisassemblerComment>
+    <DisassemblerComment>
+      <Address>2347FA5D4FB</Address>
+      <Comment>jump if != 0
+</Comment>
+    </DisassemblerComment>
+    <DisassemblerComment>
+      <Address>2347FA5D520</Address>
+      <Comment>get_HoldingDownStrikeAngle
+</Comment>
+    </DisassemblerComment>
+    <DisassemblerComment>
+      <Address>2347FA5D523</Address>
+      <Comment>!this.m_playerController.CharacterDownStrike.IsHoldingDownStrikeAngle
+</Comment>
+    </DisassemblerComment>
+    <DisassemblerComment>
+      <Address>2347FA5D525</Address>
+      <Comment>Press both S + Space
+</Comment>
+    </DisassemblerComment>
+    <DisassemblerComment>
+      <Address>2347FA5D527</Address>
+      <Comment>this.m_queueJump = true;
+</Comment>
+    </DisassemblerComment>
+    <DisassemblerComment>
+      <Address>2347FA5D548</Address>
+      <Comment>get_IsGrounded
+</Comment>
+    </DisassemblerComment>
+    <DisassemblerComment>
+      <Address>2347FA5D54B</Address>
+      <Comment>!this.m_playerController.IsGrounded
+</Comment>
+    </DisassemblerComment>
+    <DisassemblerComment>
+      <Address>2347FA5D54D</Address>
+      <Comment>jump if != 0
+</Comment>
+    </DisassemblerComment>
+    <DisassemblerComment>
+      <Address>2347FA5D5A5</Address>
+      <Comment>this._condition.CurrentState
+</Comment>
+    </DisassemblerComment>
+    <DisassemblerComment>
+      <Address>2347FA5D5A9</Address>
+      <Comment>this._condition.CurrentState == CharacterStates.CharacterConditions.Stunned
+</Comment>
+    </DisassemblerComment>
+    <DisassemblerComment>
+      <Address>2347FA5D5AC</Address>
+      <Comment>jump if != 4
+</Comment>
+    </DisassemblerComment>
+    <DisassemblerComment>
+      <Address>2347FA5D668</Address>
+      <Comment>get_controller.State.IsGrounded
+</Comment>
+    </DisassemblerComment>
+    <DisassemblerComment>
+      <Address>2347FA5D66B</Address>
+      <Comment>!this._controller.State.IsGrounded
+</Comment>
+    </DisassemblerComment>
+    <DisassemblerComment>
+      <Address>2347FA5D66D</Address>
+      <Comment>jump if != 0
+</Comment>
+    </DisassemblerComment>
+    <DisassemblerComment>
+      <Address>2347FA5D6E0</Address>
+      <Comment>SaveManager.PlayerSaveData.GetRelic(RelicType.FlightBonusCurse)
+</Comment>
+    </DisassemblerComment>
+    <DisassemblerComment>
+      <Address>2347FA5D6E9</Address>
+      <Comment>SaveManager.PlayerSaveData.GetRelic(RelicType.FlightBonusCurse).Level
+</Comment>
+    </DisassemblerComment>
+    <DisassemblerComment>
+      <Address>2347FA5D6ED</Address>
+      <Comment>SaveManager.PlayerSaveData.GetRelic(RelicType.FlightBonusCurse).Level &gt; 0
+</Comment>
+    </DisassemblerComment>
+    <DisassemblerComment>
+      <Address>2347FA5D6EF</Address>
+      <Comment>jump if &lt;= 0
+</Comment>
+    </DisassemblerComment>
+    <DisassemblerComment>
+      <Address>2347FA5D8A0</Address>
+      <Comment>get_m_playerController.CharacterFlight.IsComet
+</Comment>
+    </DisassemblerComment>
+    <DisassemblerComment>
+      <Address>2347FA5D8A3</Address>
+      <Comment>if (this.m_playerController.CharacterFlight.IsComet)
+</Comment>
+    </DisassemblerComment>
+    <DisassemblerComment>
+      <Address>2347FA5D8A5</Address>
+      <Comment>jump if == 0
+</Comment>
+    </DisassemblerComment>
+    <DisassemblerComment>
+      <Address>2347FA5D8A7</Address>
+      <Comment>return true;
+</Comment>
+    </DisassemblerComment>
+    <DisassemblerComment>
+      <Address>2347FA5D8C2</Address>
+      <Comment>this.AbilityPermitted
+</Comment>
+    </DisassemblerComment>
+    <DisassemblerComment>
+      <Address>2347FA5D8C6</Address>
+      <Comment>if (!this.AbilityPermitted 
+</Comment>
+    </DisassemblerComment>
+    <DisassemblerComment>
+      <Address>2347FA5D8C8</Address>
+      <Comment>jump if == 0
+</Comment>
+    </DisassemblerComment>
+    <DisassemblerComment>
+      <Address>2347FA5D8D4</Address>
+      <Comment>get_JumpAuthorized
+</Comment>
+    </DisassemblerComment>
+    <DisassemblerComment>
+      <Address>2347FA5D8DA</Address>
+      <Comment>!this.JumpAuthorized
+</Comment>
+    </DisassemblerComment>
+    <DisassemblerComment>
+      <Address>2347FA5D8DC</Address>
+      <Comment>jump if == 0
+</Comment>
+    </DisassemblerComment>
+    <DisassemblerComment>
+      <Address>2347FA5D8EC</Address>
+      <Comment>this._condition.CurrentState
+</Comment>
+    </DisassemblerComment>
+    <DisassemblerComment>
+      <Address>2347FA5D8F0</Address>
+      <Comment>this._condition.CurrentState != CharacterStates.CharacterConditions.Normal
+</Comment>
+    </DisassemblerComment>
+    <DisassemblerComment>
+      <Address>2347FA5D8F2</Address>
+      <Comment>jump if == 0
+</Comment>
+    </DisassemblerComment>
+    <DisassemblerComment>
+      <Address>2347FA5DA08</Address>
+      <Comment>get_controller.State.IsGrounded
+</Comment>
+    </DisassemblerComment>
+    <DisassemblerComment>
+      <Address>2347FA5DA0B</Address>
+      <Comment>!this._controller.State.IsGrounded
+</Comment>
+    </DisassemblerComment>
+    <DisassemblerComment>
+      <Address>2347FA5DA20</Address>
+      <Comment>this.IsJumpWithinLeeway()
+</Comment>
+    </DisassemblerComment>
+    <DisassemblerComment>
+      <Address>2347FA5DA23</Address>
+      <Comment>!this.IsJumpWithinLeeway()
+</Comment>
+    </DisassemblerComment>
+    <DisassemblerComment>
+      <Address>2347FA5DA37</Address>
+      <Comment>!this.EvaluateJumpTimeWindow()
+</Comment>
+    </DisassemblerComment>
+    <DisassemblerComment>
+      <Address>2347FA5DA3B</Address>
+      <Comment>this.JumpRestrictions
+</Comment>
+    </DisassemblerComment>
+    <DisassemblerComment>
+      <Address>2347FA5DA42</Address>
+      <Comment>this.JumpRestrictions != CharacterJump.JumpBehavior.CanJumpAnywhereAnyNumberOfTimes
+</Comment>
+    </DisassemblerComment>
+    <DisassemblerComment>
+      <Address>2347FA5DA47</Address>
+      <Comment>base.NumberOfJumpsLeft
+</Comment>
+    </DisassemblerComment>
+    <DisassemblerComment>
+      <Address>2347FA5DA4E</Address>
+      <Comment>base.NumberOfJumpsLeft &lt;= 0
+</Comment>
+    </DisassemblerComment>
+    <DisassemblerComment>
+      <Address>2347FA5DA52</Address>
+      <Comment>return 0
+</Comment>
+    </DisassemblerComment>
+  </DisassemblerComments>
+</CheatTable>
